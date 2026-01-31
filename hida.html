@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>קופסת המיסתורין</title>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            color: #4a5568;
+            text-align: center;
+            margin-bottom: 5px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #718096;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .intro {
+            background: #edf2f7;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            border-right: 4px solid #667eea;
+        }
+
+        .controls {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+        }
+
+        label {
+            font-weight: bold;
+            color: #4a5568;
+        }
+
+        input {
+            padding: 8px 12px;
+            border: 2px solid #cbd5e0;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        button {
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #5a67d8;
+        }
+
+        .stats {
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .grid-container {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(5, 60px);
+            grid-template-rows: repeat(5, 60px);
+            gap: 2px;
+            background: #2d3748;
+            padding: 10px;
+            border-radius: 10px;
+        }
+
+        .cell {
+            background: #4a5568;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .cell.measured { background: #48bb78; }
+        .cell.blocked { background: #f56565; }
+        .cell.partial { background: #ed8936; }
+
+        .drawing-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 60px);
+            grid-template-rows: repeat(5, 60px);
+            gap: 2px;
+        }
+
+        .drawing-cell {
+            border: 1px solid #cbd5e0;
+            cursor: pointer;
+        }
+
+        .drawing-cell.filled {
+            background: #2d3748;
+        }
+
+        .results, .reveal-section {
+            background: #edf2f7;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .hidden-object {
+            display: grid;
+            grid-template-columns: repeat(5, 40px);
+            grid-template-rows: repeat(5, 40px);
+            gap: 2px;
+            margin: 20px auto;
+            width: fit-content;
+        }
+
+        .hidden-cell {
+            border: 1px solid #cbd5e0;
+        }
+
+        .hidden-cell.object {
+            background: #2d3748;
+        }
+    </style>
+</head>
+
+<body>
+<div class="container">
+
+    <h1>🔦 קופסת המיסתורין 🔦</h1>
+    <p class="subtitle">ניסוי קטן על ידיעה בלי ראייה</p>
+
+    <div class="intro">
+        <p><strong>המשימה:</strong> לגלות מה הצורה של חפץ נסתר – בלי לראות אותו.</p>
+        <p>כל מדידה נותנת רמז, אבל מספר המדידות מוגבל.</p>
+        <p><strong>אתגר:</strong> נסו לגלות את החפץ עם כמה שפחות מדידות.</p>
+        <p><em>רעיון:</em> אחד מודד, השני מתעד – ומחליפים תפקידים באמצע.</p>
+    </div>
+
+    <div class="controls">
+        <label>מספר מדידות:
+            <input type="number" id="maxMeasurements" value="10" min="5" max="20">
+        </label>
+        <button onclick="resetExperiment()">ניסוי חדש</button>
+        <button onclick="revealObject()">גלה את החפץ</button>
+    </div>
+
+    <p style="text-align:center; color:#718096; font-size:14px;">
+        אפשר גם לעצור כאן — לא כל תעלומה חייבת להיחשף.
+    </p>
+
+    <div class="stats">
+        <div>
+            <div class="stat-value" id="measurementCount">0</div>
+            מדידות שבוצעו
+        </div>
+        <div>
+            <div class="stat-value" id="remainingCount">10</div>
+            מדידות נותרו
+        </div>
+    </div>
+
+    <div class="grid-container">
+        <div>
+            <h3>מדידות</h3>
+            <div id="measurementGrid" class="grid"></div>
+        </div>
+
+        <div>
+            <h3>השרטוט שלכם</h3>
+            <div id="drawingGrid" class="drawing-grid"></div>
+            <button onclick="clearDrawing()" style="margin-top:10px;">נקה</button>
+        </div>
+    </div>
+
+    <div class="results">
+        <h3>תצפיות</h3>
+        <div id="observations"></div>
+    </div>
+
+    <div class="reveal-section" id="revealSection" style="display:none;">
+        <p style="text-align:center; font-style:italic;">
+            אין דרך אחת נכונה לגלות משהו נסתר.  
+            השאלות שבחרתם חשובות לא פחות מהתשובות.
+        </p>
+
+        <div id="actualObject" class="hidden-object"></div>
+
+        <p><strong>שאלה אחת למחשבה:</strong></p>
+        <p>איזו מדידה אחת הייתה הכי משמעותית? למה דווקא היא?</p>
+    </div>
+
+    <div style="margin-top:40px; text-align:center; font-size:14px; color:#718096;">
+        פעילות חקר אינטראקטיבית · עריכה ופיתוח: מילכה ברקו גרש
+    </div>
+
+</div>
+
+<script>
+const patterns = [
+ [[0,0,0,0,0],[0,1,0,0,0],[0,1,0,0,0],[0,1,1,0,0],[0,0,0,0,0]],
+ [[0,0,0,0,0],[0,1,1,1,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,0,0,0]],
+ [[0,0,0,0,0],[0,1,1,0,0],[0,1,1,0,0],[0,0,0,0,0],[0,0,0,0,0]]
+];
+
+let pattern, used={}, count=0, max=10;
+
+function init(){
+ pattern = patterns[Math.floor(Math.random()*patterns.length)];
+ used={}; count=0;
+ max=parseInt(maxMeasurements.value);
+ update();
+ drawGrids();
+}
+
+function drawGrids(){
+ measurementGrid.innerHTML='';
+ drawingGrid.innerHTML='';
+ for(let r=0;r<5;r++)for(let c=0;c<5;c++){
+  let d=document.createElement('div');
+  d.className='cell';
+  d.textContent=String.fromCharCode(65+r)+(c+1);
+  d.onclick=()=>measure(r,c,d);
+  measurementGrid.appendChild(d);
+
+  let x=document.createElement('div');
+  x.className='drawing-cell';
+  x.onclick=()=>x.classList.toggle('filled');
+  drawingGrid.appendChild(x);
+ }
+}
+
+function measure(r,c,el){
+ let id=r+'-'+c;
+ if(used[id]||count>=max) return;
+ count++;
+ used[id]=pattern[r][c]?'block':'pass';
+ el.classList.add(used[id]);
+ update();
+}
+
+function update(){
+ measurementCount.textContent=count;
+ remainingCount.textContent=max-count;
+ observations.innerHTML=count
+ ? `בוצעו ${count} מדידות.`
+ : 'טרם בוצעו מדידות.';
+}
+
+function clearDrawing(){
+ document.querySelectorAll('.drawing-cell').forEach(c=>c.classList.remove('filled'));
+}
+
+function revealObject(){
+ revealSection.style.display='block';
+ actualObject.innerHTML='';
+ for(let r=0;r<5;r++)for(let c=0;c<5;c++){
+  let d=document.createElement('div');
+  d.className='hidden-cell'+(pattern[r][c]?' object':'');
+  actualObject.appendChild(d);
+ }
+}
+
+function resetExperiment(){ init(); revealSection.style.display='none'; }
+
+init();
+</script>
+</body>
+</html>
