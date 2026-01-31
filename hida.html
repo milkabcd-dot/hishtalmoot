@@ -1,62 +1,113 @@
 <!DOCTYPE html>
-<html lang="he">
+<html lang="he" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <title>חידה – ריבועים</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      direction: rtl;
-      text-align: center;
-    }
-
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(4, 80px);
-      gap: 10px;
-      justify-content: center;
-      margin-top: 30px;
-    }
-
-    .square {
-      width: 80px;
-      height: 80px;
-      background-color: #ddd;
-      border: 2px solid #444;
-      cursor: pointer;
-    }
-
-    .square.active {
-      background-color: orange;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>קופסת המיסתורין - סימולציה</title>
+<style>
+body { font-family: 'Segoe UI', Tahoma, sans-serif; max-width: 1200px; margin:0 auto; padding:20px; background: linear-gradient(135deg,#667eea 0%,#764ba2 100%); min-height:100vh; }
+.container { background:white; border-radius:15px; padding:30px; box-shadow:0 10px 40px rgba(0,0,0,0.3); }
+h1 { color:#4a5568; text-align:center; margin-bottom:10px; }
+.subtitle { text-align:center; color:#718096; margin-bottom:30px; font-size:1.1em; }
+.grid { display:grid; grid-template-columns:repeat(5,60px); grid-template-rows:repeat(5,60px); gap:2px; background:#2d3748; padding:10px; border-radius:10px; box-shadow:0 4px 15px rgba(0,0,0,0.2); margin:0 auto; }
+.cell { background:#4a5568; border:1px solid #718096; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:12px; color:white; transition:all 0.3s; }
+.cell.measured { background:#48bb78; font-weight:bold; }   /* עבר */
+.cell.partial { background:#ed8936; font-weight:bold; }    /* עבר חלקית */
+.cell.blocked { background:#f56565; font-weight:bold; }    /* נחסם */
+.legend { display:flex; gap:20px; justify-content:center; margin-top:20px; flex-wrap:wrap; }
+.legend-item { display:flex; align-items:center; gap:8px; }
+.legend-box { width:30px; height:30px; border-radius:5px; border:1px solid #2d3748; }
+</style>
 </head>
-
 <body>
+<div class="container">
+<h1>🔦 קופסת המיסתורין 🔦</h1>
+<p class="subtitle">איך אפשר לדעת שמשהו קיים אם איננו רואים אותו?</p>
 
-  <h2>לחצו על הריבועים</h2>
+<div class="grid" id="measurementGrid"></div>
 
-  <div class="grid">
-    <div class="square"></div>
-    <div class="square"></div>
-    <div class="square"></div>
-    <div class="square"></div>
-
-    <div class="square"></div>
-    <div class="square"></div>
-    <div class="square"></div>
-    <div class="square"></div>
+<div class="legend">
+  <div class="legend-item">
+    <div class="legend-box" style="background:#48bb78;"></div>עבר
   </div>
+  <div class="legend-item">
+    <div class="legend-box" style="background:#ed8936;"></div>עבר חלקית (קרוב למטרה)
+  </div>
+  <div class="legend-item">
+    <div class="legend-box" style="background:#f56565;"></div>נחסם
+  </div>
+  <div class="legend-item">
+    <div class="legend-box" style="background:#4a5568;"></div>לא נמדד
+  </div>
+</div>
 
-  <script>
-    const squares = document.querySelectorAll(".square");
+<script>
+// דוגמא לחפץ נסתר
+const currentPattern = [
+ [0,0,0,0,0],
+ [0,1,1,0,0],
+ [0,1,0,1,0],
+ [0,0,1,0,0],
+ [0,0,0,0,0]
+];
 
-    squares.forEach(square => {
-      square.addEventListener("click", () => {
-        square.classList.toggle("active");
-      });
-    });
-  </script>
+let measurements = {};
+let maxMeasurements = 10;
+let measurementCount = 0;
 
+function createMeasurementGrid() {
+  const grid = document.getElementById('measurementGrid');
+  grid.innerHTML = '';
+  for (let row=0; row<5; row++){
+    for (let col=0; col<5; col++){
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      const cellId = `${row}-${col}`;
+      cell.dataset.cell = cellId;
+      const label = String.fromCharCode(65+row) + (col+1);
+      cell.innerHTML = `<small>${label}</small>`;
+
+      cell.onclick = () => measureCell(row,col);
+
+      // הסרת צבע קודם
+      cell.classList.remove('measured','partial','blocked');
+      if(measurements[cellId]){
+        if(measurements[cellId]==='pass') cell.classList.add('measured');
+        else if(measurements[cellId]==='block') cell.classList.add('blocked');
+        else if(measurements[cellId]==='partial') cell.classList.add('partial');
+      }
+
+      grid.appendChild(cell);
+    }
+  }
+}
+
+function measureCell(row,col){
+  const cellId = `${row}-${col}`;
+  if(measurements[cellId]) { alert('תא זה כבר נמדד!'); return; }
+  if(measurementCount>=maxMeasurements) { alert('הגעתם למספר המדידות המקסימלי!'); return; }
+
+  measurementCount++;
+
+  if(currentPattern[row][col]===1) measurements[cellId]='block'; 
+  else if(checkAdjacent(row,col)) measurements[cellId]='partial';
+  else measurements[cellId]='pass';
+
+  createMeasurementGrid();
+}
+
+function checkAdjacent(row,col){
+  const directions=[[-1,0],[1,0],[0,-1],[0,1]];
+  for(let [dr,dc] of directions){
+    const r=row+dr, c=col+dc;
+    if(r>=0&&r<5&&c>=0&&c<5){
+      if(currentPattern[r][c]===1) return true;
+    }
+  }
+  return false;
+}
+
+createMeasurementGrid();
+</script>
 </body>
 </html>
