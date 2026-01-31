@@ -12,7 +12,7 @@ h1 { color:#4a5568; text-align:center; margin-bottom:10px; }
 .controls { display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap; align-items:center; justify-content:center; }
 .controls input { padding:6px 10px; border-radius:5px; border:1px solid #cbd5e0; }
 .controls button { padding:8px 14px; border:none; border-radius:6px; background:#667eea; color:white; cursor:pointer; }
-.stats { display:flex; gap:20px; justify-content:center; margin-bottom:15px; }
+.stats { display:flex; gap:20px; justify-content:center; margin-bottom:15px; flex-wrap:wrap; }
 .stat-item { text-align:center; }
 .stat-value { font-size:24px; font-weight:bold; color:#667eea; }
 .stat-label { color:#718096; font-size:14px; }
@@ -25,6 +25,15 @@ h1 { color:#4a5568; text-align:center; margin-bottom:10px; }
 .legend-item { display:flex; align-items:center; gap:5px; }
 .legend-box { width:25px; height:25px; border-radius:4px; border:1px solid #2d3748; }
 .message { text-align:center; margin-top:10px; color:#c53030; font-weight:bold; }
+.results { background:#edf2f7; padding:20px; border-radius:10px; margin-top:20px; }
+.result-item { padding:10px; margin:5px 0; background:white; border-radius:5px; border-right:3px solid #667eea; }
+#actualObject { display:grid; grid-template-columns:repeat(5,40px); grid-template-rows:repeat(5,40px); gap:1px; margin:10px auto; width:fit-content; }
+.hidden-cell { background:white; border:1px solid #cbd5e0; }
+.hidden-cell.object { background:#2d3748; }
+@media(max-width:768px){
+.grid { grid-template-columns:repeat(5,40px); grid-template-rows:repeat(5,40px); }
+#actualObject { grid-template-columns:repeat(5,30px); grid-template-rows:repeat(5,30px); }
+}
 </style>
 </head>
 <body>
@@ -54,125 +63,134 @@ h1 { color:#4a5568; text-align:center; margin-bottom:10px; }
 
 <div class="message" id="gameMessage"></div>
 
-<div id="observations" class="stats" style="flex-direction:column;"></div>
+<div class="results" id="observations"></div>
 
-<div id="revealSection" style="display:none; text-align:center; margin-top:20px;">
-<h2 style="color:#c53030;">החפץ האמיתי:</h2>
-<div id="actualObject" class="grid"></div>
+<div id="revealSection" style="display:none;">
+<h2 style="text-align:center; color:#c53030;">החפץ האמיתי:</h2>
+<div id="actualObject"></div>
+<div style="margin-top:20px; text-align:center;">
+<h4>שאלות למחשבה:</h4>
+<ul style="text-align:right; max-width:600px; margin:0 auto;">
+<li>עד כמה השרטוט שלכם דומה לחפץ האמיתי?</li>
+<li>אילו מדידות היו הכי חשובות?</li>
+<li>איך מספר המדידות המוגבל השפיע על הדיוק?</li>
+<li>כיצד הפעילות קשורה לחקר מבנה החומר?</li>
+</ul>
+</div>
 </div>
 </div>
 
 <script>
-// דוגמא לחפץ נסתר
-const objectPatterns = [
+const objectPatterns=[
  [[0,0,0,0,0],[0,1,1,0,0],[0,1,0,1,0],[0,0,1,0,0],[0,0,0,0,0]],
- [[0,0,0,0,0],[0,1,1,1,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,0,0,0]]
+ [[0,0,0,0,0],[0,1,1,1,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,0,0,0]],
+ [[0,0,0,0,0],[0,1,0,0,0],[0,1,1,1,0],[0,1,0,0,0],[0,0,0,0,0]],
+ [[0,0,0,0,0],[0,0,1,0,0],[0,1,1,1,0],[0,0,1,0,0],[0,0,0,0,0]]
 ];
 
-let currentPattern = [];
-let measurements = {};
-let measurementCount = 0;
-let maxMeasurements = 10;
+let currentPattern=[];
+let measurements={};
+let measurementCount=0;
+let maxMeasurements=10;
 
 function initializeExperiment(){
-  currentPattern = objectPatterns[Math.floor(Math.random()*objectPatterns.length)];
-  measurements = {};
-  measurementCount = 0;
-  maxMeasurements = parseInt(document.getElementById('maxMeasurements').value);
-  document.getElementById('measurementCount').textContent='0';
-  document.getElementById('remainingCount').textContent=maxMeasurements;
-  document.getElementById('gameMessage').textContent='';
-  document.getElementById('revealSection').style.display='none';
-  createMeasurementGrid();
-  updateObservations();
+ currentPattern=objectPatterns[Math.floor(Math.random()*objectPatterns.length)];
+ measurements={};
+ measurementCount=0;
+ maxMeasurements=parseInt(document.getElementById('maxMeasurements').value);
+ document.getElementById('measurementCount').textContent='0';
+ document.getElementById('remainingCount').textContent=maxMeasurements;
+ document.getElementById('gameMessage').textContent='';
+ document.getElementById('revealSection').style.display='none';
+ createMeasurementGrid();
+ updateObservations();
 }
 
 function createMeasurementGrid(){
-  const grid = document.getElementById('measurementGrid');
-  grid.innerHTML='';
-  for(let row=0;row<5;row++){
-    for(let col=0;col<5;col++){
-      const cell = document.createElement('div');
-      cell.className='cell';
-      const cellId = `${row}-${col}`;
-      cell.dataset.cell=cellId;
-      cell.innerHTML=`<small>${String.fromCharCode(65+row)}${col+1}</small>`;
-      cell.onclick=()=>measureCell(row,col);
-
-      cell.classList.remove('measured','partial','blocked');
-      if(measurements[cellId]){
-        if(measurements[cellId]==='pass') cell.classList.add('measured');
-        else if(measurements[cellId]==='partial') cell.classList.add('partial');
-        else if(measurements[cellId]==='block') cell.classList.add('blocked');
-      }
-
-      grid.appendChild(cell);
-    }
-  }
+ const grid=document.getElementById('measurementGrid');
+ grid.innerHTML='';
+ for(let row=0;row<5;row++){
+   for(let col=0;col<5;col++){
+     const cell=document.createElement('div');
+     cell.className='cell';
+     const cellId=`${row}-${col}`;
+     cell.dataset.cell=cellId;
+     cell.innerHTML=`<small>${String.fromCharCode(65+row)}${col+1}</small>`;
+     cell.onclick=()=>measureCell(row,col);
+     cell.classList.remove('measured','partial','blocked');
+     if(measurements[cellId]){
+       if(measurements[cellId]==='pass') cell.classList.add('measured');
+       else if(measurements[cellId]==='partial') cell.classList.add('partial');
+       else if(measurements[cellId]==='block') cell.classList.add('blocked');
+     }
+     grid.appendChild(cell);
+   }
+ }
 }
 
 function measureCell(row,col){
-  const cellId=`${row}-${col}`;
-  if(measurements[cellId]){
-    document.getElementById('gameMessage').textContent='תא זה כבר נמדד!';
-    return;
-  }
-  if(measurementCount>=maxMeasurements){
-    document.getElementById('gameMessage').textContent='הגעתם למספר המדידות המקסימלי!';
-    return;
-  }
-  measurementCount++;
-  if(currentPattern[row][col]===1) measurements[cellId]='block';
-  else if(checkAdjacent(row,col)) measurements[cellId]='partial';
-  else measurements[cellId]='pass';
-  
-  document.getElementById('measurementCount').textContent=measurementCount;
-  document.getElementById('remainingCount').textContent=maxMeasurements-measurementCount;
-  createMeasurementGrid();
-  updateObservations();
-  document.getElementById('gameMessage').textContent='';
+ const cellId=`${row}-${col}`;
+ if(measurements[cellId]){
+   document.getElementById('gameMessage').textContent='תא זה כבר נמדד!';
+   return;
+ }
+ if(measurementCount>=maxMeasurements){
+   document.getElementById('gameMessage').textContent='הגעתם למספר המדידות המקסימלי!';
+   return;
+ }
+ measurementCount++;
+ if(currentPattern[row][col]===1) measurements[cellId]='block';
+ else if(checkAdjacent(row,col)) measurements[cellId]='partial';
+ else measurements[cellId]='pass';
+
+ document.getElementById('measurementCount').textContent=measurementCount;
+ document.getElementById('remainingCount').textContent=maxMeasurements-measurementCount;
+ createMeasurementGrid();
+ updateObservations();
+ document.getElementById('gameMessage').textContent='';
 }
 
 function checkAdjacent(row,col){
-  const dirs=[[-1,0],[1,0],[0,-1],[0,1]];
-  for(let [dr,dc] of dirs){
-    const r=row+dr,c=col+dc;
-    if(r>=0&&r<5&&c>=0&&c<5){
-      if(currentPattern[r][c]===1) return true;
-    }
-  }
-  return false;
+ const dirs=[[-1,0],[1,0],[0,-1],[0,1]];
+ for(let [dr,dc] of dirs){
+   const r=row+dr,c=col+dc;
+   if(r>=0&&r<5&&c>=0&&c<5){
+     if(currentPattern[r][c]===1) return true;
+   }
+ }
+ return false;
 }
 
 function updateObservations(){
-  const obs = document.getElementById('observations');
-  const passed = Object.values(measurements).filter(v=>v==='pass').length;
-  const partial = Object.values(measurements).filter(v=>v==='partial').length;
-  const blocked = Object.values(measurements).filter(v=>v==='block').length;
-  obs.innerHTML=`
-  <div class="stat-item">✅ קרן עברה: ${passed}</div>
-  <div class="stat-item">⚠️ קרן עברה חלקית: ${partial}</div>
-  <div class="stat-item">❌ קרן נחסמה: ${blocked}</div>
-  `;
+ const obs=document.getElementById('observations');
+ const passed=Object.values(measurements).filter(v=>v==='pass').length;
+ const partial=Object.values(measurements).filter(v=>v==='partial').length;
+ const blocked=Object.values(measurements).filter(v=>v==='block').length;
+ obs.innerHTML=`
+ <div class="result-item">✅ קרן עברה במלואה: ${passed} מדידות</div>
+ <div class="result-item">⚠️ קרן עברה חלקית: ${partial} מדידות</div>
+ <div class="result-item">❌ קרן נחסמה: ${blocked} מדידות</div>
+ `;
+ if(blocked>0) obs.innerHTML+=`<div class="result-item" style="background:#fef5e7; border-right-color:#f39c12;"><strong>מסקנה:</strong> קיים חפץ בתוך הקופסה!</div>`;
 }
 
 function resetExperiment(){ initializeExperiment(); }
+
 function revealObject(){
-  if(measurementCount===0){ document.getElementById('gameMessage').textContent='בצעו לפחות מדידה אחת לפני גילוי החפץ!'; return; }
-  const section=document.getElementById('revealSection');
-  section.style.display='block';
-  const actual=document.getElementById('actualObject');
-  actual.innerHTML='';
-  actual.className='grid';
-  for(let row=0;row<5;row++){
-    for(let col=0;col<5;col++){
-      const cell=document.createElement('div');
-      cell.className='cell';
-      if(currentPattern[row][col]===1) cell.classList.add('blocked');
-      actual.appendChild(cell);
-    }
-  }
-  section.scrollIntoView({behavior:'smooth', block:'nearest'});
+ if(measurementCount===0){ document.getElementById('gameMessage').textContent='בצעו לפחות מדידה אחת לפני גילוי החפץ!'; return; }
+ const section=document.getElementById('revealSection');
+ section.style.display='block';
+ const actual=document.getElementById('actualObject');
+ actual.innerHTML='';
+ for(let row=0;row<5;row++){
+   for(let col=0;col<5;col++){
+     const cell=document.createElement('div');
+     cell.className='hidden-cell';
+     if(currentPattern[row][col]===1) cell.classList.add('object');
+     actual.appendChild(cell);
+   }
+ }
+ section.scrollIntoView({behavior:'smooth', block:'nearest'});
 }
 
 initializeExperiment();
